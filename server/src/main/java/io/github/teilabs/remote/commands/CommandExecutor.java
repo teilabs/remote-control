@@ -66,8 +66,8 @@ public class CommandExecutor {
         }
 
         String value = result.output().trim();
-        CommandArgument slider = command.arguments().get(0);
-        return slider.validate(Map.of(slider.name(), value));
+        CommandArgument argument = command.arguments().get(0);
+        return argument.validate(Map.of(argument.name(), value));
     }
 
     private static ExecutionResult run(String commandName, List<String> commandList) {

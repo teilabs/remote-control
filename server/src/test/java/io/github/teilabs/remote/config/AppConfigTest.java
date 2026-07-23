@@ -21,7 +21,7 @@ public class AppConfigTest {
     public TemporaryFolder temporaryFolder = new TemporaryFolder();
 
     @Test
-    public void loadsSyncableCommandWithOneSliderAndReadCommand() throws Exception {
+    public void loadsSyncableCommandWithOneArgumentAndReadCommand() throws Exception {
         AppConfig config = load("""
                 {
                   "ttlMs": 30000,
@@ -52,6 +52,33 @@ public class AppConfigTest {
         assertNotNull(config.commands().get(0).read());
         assertTrue(config.commands().get(0).needConfirmation());
         assertFalse(config.commands().get(0).needNotificationOnComplete());
+    }
+
+    @Test
+    public void loadsSyncableToggleCommand() throws Exception {
+        AppConfig config = load("""
+                {
+                  "ttlMs": 30000,
+                  "publicKeyBase64": "%s",
+                  "commands": [{
+                    "name": "mute",
+                    "type": "SYNCABLE",
+                    "executable": "set-mute",
+                    "args": ["${muted}"],
+                    "arguments": [{
+                      "name": "muted",
+                      "type": "TOGGLE",
+                      "default": false
+                    }],
+                    "read": {
+                      "executable": "get-mute"
+                    }
+                  }]
+                }
+                """.formatted(PUBLIC_KEY));
+
+        assertEquals(ArgumentType.TOGGLE, config.commands().get(0).arguments().get(0).type());
+        assertNotNull(config.commands().get(0).read());
     }
 
     @Test

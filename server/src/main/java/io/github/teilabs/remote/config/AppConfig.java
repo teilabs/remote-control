@@ -92,9 +92,9 @@ public record AppConfig(long ttl, Ed25519PublicKeyParameters publicKey, List<Com
             if (type != CommandType.SYNCABLE) {
                 return;
             }
-            if (arguments.size() != 1 || arguments.get(0).type() != ArgumentType.SLIDER) {
+            if (arguments.size() != 1) {
                 throw new IllegalStateException(
-                        "SYNCABLE command '" + name + "' requires exactly one SLIDER argument");
+                        "SYNCABLE command '" + name + "' requires exactly one argument");
             }
             if (read == null) {
                 throw new IllegalStateException(

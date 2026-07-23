@@ -57,6 +57,33 @@
                     "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}'"
                 ]
             }
+        },
+        {
+            "name": "set-mute",
+            "type": "SYNCABLE",
+            "needConfirmation": false,
+            "needNotificationOnComplete": false,
+            "executable": "wpctl",
+            "args": [
+                "set-mute",
+                "@DEFAULT_AUDIO_SINK@",
+                "${muted}"
+            ],
+            "arguments": [
+                {
+                    "name": "muted",
+                    "label": "Muted",
+                    "type": "TOGGLE",
+                    "default": false
+                }
+            ],
+            "read": {
+                "executable": "sh",
+                "args": [
+                    "-c",
+                    "wpctl get-volume @DEFAULT_AUDIO_SINK@ | grep -q MUTED && echo true || echo false"
+                ]
+            }
         }
     ]
 }

@@ -9,15 +9,18 @@ import android.graphics.Color;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.DecelerateInterpolator;
+import android.view.inputmethod.EditorInfo;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
-import android.widget.ArrayAdapter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
@@ -38,7 +41,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -50,7 +52,7 @@ public class MainActivity extends AppCompatActivity {
 
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Handler syncHandler = new Handler(Looper.getMainLooper());
-    private final List<SyncableSlider> syncableSliders = new ArrayList<>();
+    private final List<SyncableControl> syncableControls = new ArrayList<>();
     private final Runnable syncRunnable = new Runnable() {
         @Override
         public void run() {
@@ -121,7 +123,7 @@ public class MainActivity extends AppCompatActivity {
         setLoading(false);
         setStatus("Connected · " + commands.size() + " available", R.color.remote_accent);
         commandList.removeAllViews();
-        syncableSliders.clear();
+        syncableControls.clear();
         if (commands.isEmpty()) {
             addMessage("No commands are configured on this server.");
             return;
@@ -153,25 +155,14 @@ public class MainActivity extends AppCompatActivity {
         header.setOrientation(LinearLayout.HORIZONTAL);
         row.addView(header, matchWidth());
 
-        LinearLayout labels = new LinearLayout(this);
-        labels.setOrientation(LinearLayout.VERTICAL);
-        header.addView(labels, new LinearLayout.LayoutParams(
-                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
-
         TextView name = new TextView(this);
         name.setText(humanize(command.name()));
         name.setTextColor(ContextCompat.getColor(this, R.color.remote_text));
         name.setTextSize(17);
-        labels.addView(name);
-
-        TextView type = new TextView(this);
-        type.setText(command.type().toLowerCase(Locale.ROOT));
-        type.setTextColor(ContextCompat.getColor(this, R.color.remote_text_muted));
-        type.setTextSize(12);
-        LinearLayout.LayoutParams typeParams = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-        typeParams.topMargin = dp(4);
-        labels.addView(type, typeParams);
+        name.setSingleLine(true);
+        name.setEllipsize(TextUtils.TruncateAt.END);
+        header.addView(name, new LinearLayout.LayoutParams(
+                0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
 
         MaterialButton run = new MaterialButton(this, null,
                 com.google.android.material.R.attr.materialButtonOutlinedStyle);
@@ -186,22 +177,8 @@ public class MainActivity extends AppCompatActivity {
         Map<String, ArgumentValue> argumentValues = new LinkedHashMap<>();
         if (command.type().equals("SYNCABLE")) {
             RemoteArgument argument = command.arguments().get(0);
-            Slider slider = addSlider(row, argument, argumentValues);
             run.setVisibility(View.GONE);
-            SyncableSlider syncable = new SyncableSlider(command, argument, slider);
-            slider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
-                @Override
-                public void onStartTrackingTouch(Slider unused) {
-                    syncable.tracking = true;
-                }
-
-                @Override
-                public void onStopTrackingTouch(Slider unused) {
-                    syncable.tracking = false;
-                    requestSyncableUpdate(syncable);
-                }
-            });
-            syncableSliders.add(syncable);
+            syncableControls.add(addSyncableControl(header, command, argument));
         } else {
             for (RemoteArgument argument : command.arguments()) {
                 addArgumentControl(row, argument, argumentValues);
@@ -234,6 +211,169 @@ public class MainActivity extends AppCompatActivity {
                 throw new IllegalArgumentException(
                         "Unsupported argument type: " + argument.type());
         }
+    }
+
+    private SyncableControl addSyncableControl(
+            LinearLayout header, RemoteCommand command, RemoteArgument argument) {
+        Map<String, ArgumentValue> values = new LinkedHashMap<>();
+        SyncableControl syncable;
+        switch (argument.type()) {
+            case "SLIDER": {
+                LinearLayout control = new LinearLayout(this);
+                control.setGravity(Gravity.CENTER_VERTICAL);
+                control.setOrientation(LinearLayout.HORIZONTAL);
+
+                Slider slider = new Slider(this);
+                slider.setValueFrom(argument.min());
+                slider.setValueTo(argument.max());
+                slider.setStepSize(argument.step());
+                float initial = argument.defaultValue() == null
+                        ? argument.min()
+                        : Float.parseFloat(argument.defaultValue());
+                slider.setValue(initial);
+                slider.setContentDescription(humanize(command.name()));
+                control.addView(slider, new LinearLayout.LayoutParams(
+                        0, dp(48), 1f));
+
+                TextView valueLabel = label(
+                        formatSliderValue(initial, argument.step()));
+                valueLabel.setTextColor(
+                        ContextCompat.getColor(this, R.color.remote_accent));
+                valueLabel.setGravity(Gravity.END);
+                valueLabel.setMinWidth(dp(34));
+                control.addView(valueLabel);
+                slider.addOnChangeListener((unused, sliderValue, fromUser) ->
+                        valueLabel.setText(
+                                formatSliderValue(sliderValue, argument.step())));
+                values.put(argument.name(),
+                        () -> formatSliderValue(slider.getValue(), argument.step()));
+                header.addView(control, inlineSyncableParams());
+
+                syncable = new SyncableControl(
+                        command,
+                        argument,
+                        slider,
+                        values.get(argument.name()),
+                        value -> slider.setValue(Float.parseFloat(value)));
+                slider.addOnSliderTouchListener(new Slider.OnSliderTouchListener() {
+                    @Override
+                    public void onStartTrackingTouch(Slider unused) {
+                        syncable.editing = true;
+                    }
+
+                    @Override
+                    public void onStopTrackingTouch(Slider unused) {
+                        syncable.editing = false;
+                        if (syncable.hasChanged()) {
+                            requestSyncableUpdate(syncable);
+                        }
+                    }
+                });
+                break;
+            }
+            case "SELECT": {
+                Spinner spinner = new Spinner(this);
+                ArrayAdapter<String> adapter = new ArrayAdapter<>(
+                        this, android.R.layout.simple_spinner_item, argument.options());
+                adapter.setDropDownViewResource(
+                        android.R.layout.simple_spinner_dropdown_item);
+                spinner.setAdapter(adapter);
+                int initial = argument.options().indexOf(argument.defaultValue());
+                spinner.setSelection(Math.max(initial, 0));
+                spinner.setContentDescription(humanize(command.name()));
+                values.put(argument.name(), () -> (String) spinner.getSelectedItem());
+                header.addView(spinner, inlineSyncableParams());
+
+                syncable = new SyncableControl(
+                        command,
+                        argument,
+                        spinner,
+                        values.get(argument.name()),
+                        value -> spinner.setSelection(argument.options().indexOf(value)));
+                spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
+                    @Override
+                    public void onItemSelected(
+                            AdapterView<?> parent, View view, int position, long id) {
+                        if (syncable.hasChanged()) {
+                            requestSyncableUpdate(syncable);
+                        }
+                    }
+
+                    @Override
+                    public void onNothingSelected(AdapterView<?> parent) {
+                    }
+                });
+                break;
+            }
+            case "TOGGLE": {
+                SwitchMaterial toggle = new SwitchMaterial(this);
+                toggle.setChecked(Boolean.parseBoolean(argument.defaultValue()));
+                toggle.setContentDescription(humanize(command.name()));
+                values.put(argument.name(), () -> Boolean.toString(toggle.isChecked()));
+                LinearLayout.LayoutParams toggleParams = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT, dp(48));
+                toggleParams.leftMargin = dp(16);
+                header.addView(toggle, toggleParams);
+
+                syncable = new SyncableControl(
+                        command,
+                        argument,
+                        toggle,
+                        values.get(argument.name()),
+                        value -> toggle.setChecked(Boolean.parseBoolean(value)));
+                toggle.setOnCheckedChangeListener((button, checked) -> {
+                    if (syncable.hasChanged()) {
+                        requestSyncableUpdate(syncable);
+                    }
+                });
+                break;
+            }
+            case "TEXT": {
+                EditText input = new EditText(this);
+                input.setSingleLine(true);
+                input.setText(argument.defaultValue());
+                input.setTextColor(ContextCompat.getColor(this, R.color.remote_text));
+                input.setHintTextColor(
+                        ContextCompat.getColor(this, R.color.remote_text_muted));
+                input.setContentDescription(humanize(command.name()));
+                values.put(argument.name(), () -> input.getText().toString());
+                header.addView(input, inlineSyncableParams());
+
+                syncable = new SyncableControl(
+                        command,
+                        argument,
+                        input,
+                        values.get(argument.name()),
+                        input::setText);
+                input.setImeOptions(EditorInfo.IME_ACTION_DONE);
+                input.setOnEditorActionListener((view, actionId, event) -> {
+                    if (actionId == EditorInfo.IME_ACTION_DONE) {
+                        view.clearFocus();
+                        return true;
+                    }
+                    return false;
+                });
+                input.setOnFocusChangeListener((view, hasFocus) -> {
+                    syncable.editing = hasFocus;
+                    if (!hasFocus && syncable.hasChanged()) {
+                        requestSyncableUpdate(syncable);
+                    }
+                });
+                break;
+            }
+            default:
+                throw new IllegalArgumentException(
+                        "Unsupported syncable argument type: " + argument.type());
+        }
+        syncable.view.setEnabled(false);
+        return syncable;
+    }
+
+    private LinearLayout.LayoutParams inlineSyncableParams() {
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                0, dp(48), 1f);
+        params.leftMargin = dp(16);
+        return params;
     }
 
     private Slider addSlider(
@@ -271,7 +411,7 @@ public class MainActivity extends AppCompatActivity {
         return slider;
     }
 
-    private void addSelect(
+    private Spinner addSelect(
             LinearLayout row,
             RemoteArgument argument,
             Map<String, ArgumentValue> values) {
@@ -289,9 +429,10 @@ public class MainActivity extends AppCompatActivity {
         spinner.setSelection(Math.max(initial, 0));
         row.addView(spinner, matchWidth());
         values.put(argument.name(), () -> (String) spinner.getSelectedItem());
+        return spinner;
     }
 
-    private void addToggle(
+    private SwitchMaterial addToggle(
             LinearLayout row,
             RemoteArgument argument,
             Map<String, ArgumentValue> values) {
@@ -303,9 +444,10 @@ public class MainActivity extends AppCompatActivity {
         params.topMargin = dp(14);
         row.addView(toggle, params);
         values.put(argument.name(), () -> Boolean.toString(toggle.isChecked()));
+        return toggle;
     }
 
-    private void addTextInput(
+    private EditText addTextInput(
             LinearLayout row,
             RemoteArgument argument,
             Map<String, ArgumentValue> values) {
@@ -321,6 +463,7 @@ public class MainActivity extends AppCompatActivity {
         input.setHintTextColor(ContextCompat.getColor(this, R.color.remote_text_muted));
         row.addView(input, matchWidth());
         values.put(argument.name(), () -> input.getText().toString());
+        return input;
     }
 
     private void requestExecution(
@@ -341,7 +484,7 @@ public class MainActivity extends AppCompatActivity {
                 .show();
     }
 
-    private void requestSyncableUpdate(SyncableSlider syncable) {
+    private void requestSyncableUpdate(SyncableControl syncable) {
         if (!syncable.command.needConfirmation()) {
             updateSyncableValue(syncable);
             return;
@@ -391,8 +534,11 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void syncCurrentValues() {
-        for (SyncableSlider syncable : List.copyOf(syncableSliders)) {
-            if (syncable.tracking || syncable.reading || syncable.pendingConfirmation) {
+        for (SyncableControl syncable : List.copyOf(syncableControls)) {
+            if (syncable.editing
+                    || syncable.reading
+                    || syncable.updating
+                    || syncable.pendingConfirmation) {
                 continue;
             }
             syncable.reading = true;
@@ -401,8 +547,10 @@ public class MainActivity extends AppCompatActivity {
                     String value = client().getValue(syncable.command.name());
                     runOnUiThread(() -> {
                         syncable.reading = false;
-                        if (!syncable.tracking && syncableSliders.contains(syncable)) {
-                            syncable.slider.setValue(Float.parseFloat(value));
+                        if (!syncable.editing
+                                && !syncable.updating
+                                && syncableControls.contains(syncable)) {
+                            syncable.applyRemoteValue(value);
                         }
                     });
                 } catch (Exception ignored) {
@@ -412,10 +560,11 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    private void updateSyncableValue(SyncableSlider syncable) {
-        String value = formatSliderValue(
-                syncable.slider.getValue(), syncable.argument.step());
-        syncable.slider.setEnabled(false);
+    private void updateSyncableValue(SyncableControl syncable) {
+        String value = syncable.value.get();
+        syncable.ready = false;
+        syncable.updating = true;
+        syncable.view.setEnabled(false);
         executor.execute(() -> {
             try {
                 RemoteClient.ExecutionResult result = client().execute(
@@ -426,7 +575,7 @@ public class MainActivity extends AppCompatActivity {
                             "Command exited with " + result.exitCode() + ": " + result.output());
                 }
                 runOnUiThread(() -> {
-                    syncable.slider.setEnabled(true);
+                    syncable.updating = false;
                     if (syncable.command.needNotificationOnComplete()) {
                         showResult(syncable.command, result);
                     }
@@ -434,7 +583,9 @@ public class MainActivity extends AppCompatActivity {
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
-                    syncable.slider.setEnabled(true);
+                    syncable.updating = false;
+                    syncable.ready = true;
+                    syncable.view.setEnabled(true);
                     showError("Could not update " + humanize(syncable.command.name()), e);
                     syncCurrentValues();
                 });
@@ -617,19 +768,50 @@ public class MainActivity extends AppCompatActivity {
         String get();
     }
 
-    private static final class SyncableSlider {
+    private static final class SyncableControl {
         private final RemoteCommand command;
         private final RemoteArgument argument;
-        private final Slider slider;
-        private boolean tracking;
+        private final View view;
+        private final ArgumentValue value;
+        private final RemoteValueSetter remoteValueSetter;
+        private boolean editing;
         private boolean reading;
+        private boolean updating;
         private boolean pendingConfirmation;
+        private boolean applyingRemoteValue;
+        private boolean ready;
+        private String lastRemoteValue;
 
-        private SyncableSlider(
-                RemoteCommand command, RemoteArgument argument, Slider slider) {
+        private SyncableControl(
+                RemoteCommand command,
+                RemoteArgument argument,
+                View view,
+                ArgumentValue value,
+                RemoteValueSetter remoteValueSetter) {
             this.command = command;
             this.argument = argument;
-            this.slider = slider;
+            this.view = view;
+            this.value = value;
+            this.remoteValueSetter = remoteValueSetter;
         }
+
+        private boolean hasChanged() {
+            return ready
+                    && !applyingRemoteValue
+                    && !value.get().equals(lastRemoteValue);
+        }
+
+        private void applyRemoteValue(String remoteValue) {
+            applyingRemoteValue = true;
+            lastRemoteValue = remoteValue;
+            remoteValueSetter.set(remoteValue);
+            applyingRemoteValue = false;
+            ready = true;
+            view.setEnabled(true);
+        }
+    }
+
+    private interface RemoteValueSetter {
+        void set(String value);
     }
 }

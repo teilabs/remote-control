@@ -6,7 +6,7 @@ from that metadata, and every protected request is signed with an Ed25519 key
 stored on the Android device.
 
 Commands can be simple buttons, commands with arguments, or live synchronized
-sliders such as a volume control.
+controls such as volume sliders, mute toggles, selections, and text values.
 
 ## Project structure
 
@@ -134,7 +134,7 @@ Every command has these common fields:
 | `executable` | Yes | Program to execute |
 | `args` | No | Array of fixed arguments and argument placeholders |
 | `arguments` | No | UI argument definitions |
-| `read` | For `SYNCABLE` | Command used to read the current slider value |
+| `read` | For `SYNCABLE` | Command used to read the current argument value |
 | `needConfirmation` | No | Ask for confirmation before execution |
 | `needNotificationOnComplete` | No | Show a result dialog after completion |
 
@@ -292,10 +292,10 @@ Text is passed as one process argument. Be careful when placing text
 placeholders inside `sh -c`, because the shell will interpret the resulting
 string.
 
-## Synchronized sliders
+## Synchronized controls
 
-A `SYNCABLE` command represents a live value such as volume or brightness. It
-must have exactly one `SLIDER` argument and a `read` command.
+A `SYNCABLE` command represents one live value. It must have exactly one
+argument of any supported type and a `read` command.
 
 ```json
 {
@@ -333,16 +333,55 @@ must have exactly one `SLIDER` argument and a `read` command.
 The `read` command must:
 
 - Exit successfully.
-- Print only one numeric value.
-- Use the same units as the slider.
-- Return a value inside the configured range and aligned to its step.
+- Print only the argument value.
+- Return a value valid for the configured argument type.
 
 For example, the slider above expects `50`, not `0.50`. The `awk` expression
 converts the value returned by `wpctl`.
 
 The Android client reads the value when commands load and then every two
-seconds. It ignores incoming values while the user is dragging and executes
-the setter immediately when the slider is released.
+seconds. It commits changes according to the control:
+
+| Argument type | When Android sends the new value |
+| --- | --- |
+| `SLIDER` | When the slider is released |
+| `TOGGLE` | When the switch changes |
+| `SELECT` | When a new option is selected |
+| `TEXT` | When Done is pressed or the field loses focus |
+
+Incoming values are paused while a control is being edited or updated.
+
+A synchronized toggle uses the same one-value contract:
+
+```json
+{
+  "name": "set-mute",
+  "type": "SYNCABLE",
+  "needConfirmation": false,
+  "needNotificationOnComplete": false,
+  "executable": "wpctl",
+  "args": [
+    "set-mute",
+    "@DEFAULT_AUDIO_SINK@",
+    "${muted}"
+  ],
+  "arguments": [
+    {
+      "name": "muted",
+      "label": "Muted",
+      "type": "TOGGLE",
+      "default": false
+    }
+  ],
+  "read": {
+    "executable": "sh",
+    "args": [
+      "-c",
+      "wpctl get-volume @DEFAULT_AUDIO_SINK@ | grep -q MUTED && echo true || echo false"
+    ]
+  }
+}
+```
 
 ## Building from source
 
@@ -474,12 +513,13 @@ The configured process could not start, the sync read command failed, or the
 desktop-session environment is missing. Run the exact executable and arguments
 from the same terminal used to launch the server.
 
-### A synchronized slider does not update
+### A synchronized control does not update
 
 - Run its `read` command manually.
-- Confirm that it outputs only a number.
-- Confirm that the number uses the slider's units.
-- Check that the value is within `min` and `max` and aligned to `step`.
+- Confirm that it outputs only one value.
+- For sliders, check range, units, and step alignment.
+- For toggles, output exactly `true` or `false`.
+- For selects, output one configured option exactly.
 
 ## API summary
 
@@ -487,7 +527,7 @@ from the same terminal used to launch the server.
 | --- | --- | --- | --- |
 | `GET` | `/health` | No | Server health check |
 | `GET` | `/config` | Yes | Load command and UI metadata |
-| `POST` | `/value` | Yes | Read a synchronized slider value |
+| `POST` | `/value` | Yes | Read a synchronized argument value |
 | `POST` | `/execute` | Yes | Execute a configured command |
 
 ## License
