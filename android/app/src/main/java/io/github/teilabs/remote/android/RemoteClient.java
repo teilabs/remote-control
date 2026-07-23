@@ -31,6 +31,8 @@ final class RemoteClient {
         List<RemoteCommand> result = new ArrayList<>();
         for (int i = 0; i < commands.length(); i++) {
             JSONObject command = commands.getJSONObject(i);
+            String type = command.optString("type", "SIMPLE");
+            boolean interactiveByDefault = type.equals("SIMPLE");
             JSONArray arguments = command.optJSONArray("arguments");
             List<RemoteArgument> parsedArguments = new ArrayList<>();
             if (arguments != null) {
@@ -58,8 +60,11 @@ final class RemoteClient {
             }
             result.add(new RemoteCommand(
                     command.getString("name"),
-                    command.optString("type", "SIMPLE"),
-                    List.copyOf(parsedArguments)));
+                    type,
+                    List.copyOf(parsedArguments),
+                    command.optBoolean("needConfirmation", interactiveByDefault),
+                    command.optBoolean(
+                            "needNotificationOnComplete", interactiveByDefault)));
         }
         return result;
     }

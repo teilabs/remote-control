@@ -135,6 +135,13 @@ Every command has these common fields:
 | `args` | No | Array of fixed arguments and argument placeholders |
 | `arguments` | No | UI argument definitions |
 | `read` | For `SYNCABLE` | Command used to read the current slider value |
+| `needConfirmation` | No | Ask for confirmation before execution |
+| `needNotificationOnComplete` | No | Show a result dialog after completion |
+
+Both interaction fields must be JSON booleans. When omitted, they default to
+`true` for `SIMPLE` commands and `false` for `SYNCABLE` commands. They control
+Android UI behavior; server-side authorization still comes from request
+signature validation.
 
 The server uses `ProcessBuilder`. The executable and every item in `args` are
 passed as separate process arguments. Shell syntax such as pipes, redirects,
@@ -149,6 +156,8 @@ A command without configurable arguments appears with a Run button:
 {
   "name": "lock",
   "type": "SIMPLE",
+  "needConfirmation": true,
+  "needNotificationOnComplete": true,
   "executable": "dms",
   "args": [
     "ipc",
@@ -292,6 +301,8 @@ must have exactly one `SLIDER` argument and a `read` command.
 {
   "name": "set-volume",
   "type": "SYNCABLE",
+  "needConfirmation": false,
+  "needNotificationOnComplete": false,
   "executable": "wpctl",
   "args": [
     "set-volume",

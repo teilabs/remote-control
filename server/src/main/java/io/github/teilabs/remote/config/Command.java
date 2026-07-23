@@ -8,6 +8,8 @@ public record Command(
         String executable,
         List<String> args,
         List<CommandArgument> arguments,
-        ReadCommand read) {
+        ReadCommand read,
+        boolean needConfirmation,
+        boolean needNotificationOnComplete) {
 
 }

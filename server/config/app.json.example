@@ -5,6 +5,8 @@
         {
             "name": "suspend",
             "type": "SIMPLE",
+            "needConfirmation": true,
+            "needNotificationOnComplete": true,
             "executable": "noctalia-shell",
             "args": [
                 "ipc",
@@ -16,6 +18,8 @@
         {
             "name": "lock",
             "type": "SIMPLE",
+            "needConfirmation": true,
+            "needNotificationOnComplete": true,
             "executable": "noctalia-shell",
             "args": [
                 "ipc",
@@ -27,6 +31,8 @@
         {
             "name": "set-volume",
             "type": "SYNCABLE",
+            "needConfirmation": false,
+            "needNotificationOnComplete": false,
             "executable": "wpctl",
             "args": [
                 "set-volume",

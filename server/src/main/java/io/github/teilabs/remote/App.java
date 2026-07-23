@@ -146,10 +146,18 @@ public class App {
     }
 
     private record CommandDescriptor(
-            String name, String type, List<CommandArgument> arguments) {
+            String name,
+            String type,
+            List<CommandArgument> arguments,
+            boolean needConfirmation,
+            boolean needNotificationOnComplete) {
         private static CommandDescriptor from(Command command) {
             return new CommandDescriptor(
-                    command.name(), command.type().name(), command.arguments());
+                    command.name(),
+                    command.type().name(),
+                    command.arguments(),
+                    command.needConfirmation(),
+                    command.needNotificationOnComplete());
         }
     }
 }

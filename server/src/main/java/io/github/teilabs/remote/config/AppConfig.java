@@ -48,9 +48,22 @@ public record AppConfig(long ttl, Ed25519PublicKeyParameters publicKey, List<Com
                 List<String> args = optionalStringArray(command.path("args"), "args");
                 List<CommandArgument> arguments = parseArguments(command.path("arguments"));
                 ReadCommand read = parseReadCommand(command.path("read"), type);
+                boolean interactiveByDefault = type == CommandType.SIMPLE;
+                boolean needConfirmation = optionalBoolean(
+                        command, "needConfirmation", interactiveByDefault);
+                boolean needNotificationOnComplete = optionalBoolean(
+                        command, "needNotificationOnComplete", interactiveByDefault);
                 validatePlaceholders(name, args, arguments);
                 validateCommandShape(name, type, arguments, read);
-                parsedCommands.add(new Command(name, type, executable, args, arguments, read));
+                parsedCommands.add(new Command(
+                        name,
+                        type,
+                        executable,
+                        args,
+                        arguments,
+                        read,
+                        needConfirmation,
+                        needNotificationOnComplete));
             }
             return List.copyOf(parsedCommands);
         }
@@ -215,6 +228,19 @@ public record AppConfig(long ttl, Ed25519PublicKeyParameters publicKey, List<Com
                 throw new IllegalStateException("Config field '" + fieldName + "' must be a number");
             }
             return value.decimalValue();
+        }
+
+        private static boolean optionalBoolean(
+                JsonNode config, String fieldName, boolean fallback) {
+            JsonNode value = config.path(fieldName);
+            if (value.isMissingNode()) {
+                return fallback;
+            }
+            if (!value.isBoolean()) {
+                throw new IllegalStateException(
+                        "Config field '" + fieldName + "' must be a boolean");
+            }
+            return value.asBoolean();
         }
 
         private static String requiredText(JsonNode config, String fieldName) {

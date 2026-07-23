@@ -198,7 +198,7 @@ public class MainActivity extends AppCompatActivity {
                 @Override
                 public void onStopTrackingTouch(Slider unused) {
                     syncable.tracking = false;
-                    updateSyncableValue(syncable);
+                    requestSyncableUpdate(syncable);
                 }
             });
             syncableSliders.add(syncable);
@@ -207,7 +207,7 @@ public class MainActivity extends AppCompatActivity {
                 addArgumentControl(row, argument, argumentValues);
             }
             run.setOnClickListener(view ->
-                    confirmExecution(command, argumentValues, run));
+                    requestExecution(command, argumentValues, run));
         }
 
         return row;
@@ -323,16 +323,46 @@ public class MainActivity extends AppCompatActivity {
         values.put(argument.name(), () -> input.getText().toString());
     }
 
-    private void confirmExecution(
+    private void requestExecution(
             RemoteCommand command,
             Map<String, ArgumentValue> argumentValues,
             MaterialButton button) {
+        if (!command.needConfirmation()) {
+            execute(command, readArguments(argumentValues), button);
+            return;
+        }
+
         new MaterialAlertDialogBuilder(this)
                 .setTitle("Run " + humanize(command.name()) + "?")
                 .setMessage("This action will run immediately on the connected server.")
                 .setNegativeButton(R.string.cancel, null)
                 .setPositiveButton("Run", (dialog, which) ->
                         execute(command, readArguments(argumentValues), button))
+                .show();
+    }
+
+    private void requestSyncableUpdate(SyncableSlider syncable) {
+        if (!syncable.command.needConfirmation()) {
+            updateSyncableValue(syncable);
+            return;
+        }
+
+        syncable.pendingConfirmation = true;
+        new MaterialAlertDialogBuilder(this)
+                .setTitle("Update " + humanize(syncable.command.name()) + "?")
+                .setMessage("Apply this value immediately on the connected server?")
+                .setNegativeButton(R.string.cancel, (dialog, which) -> {
+                    syncable.pendingConfirmation = false;
+                    syncCurrentValues();
+                })
+                .setOnCancelListener(dialog -> {
+                    syncable.pendingConfirmation = false;
+                    syncCurrentValues();
+                })
+                .setPositiveButton("Apply", (dialog, which) -> {
+                    syncable.pendingConfirmation = false;
+                    updateSyncableValue(syncable);
+                })
                 .show();
     }
 
@@ -347,7 +377,9 @@ public class MainActivity extends AppCompatActivity {
                 RemoteClient.ExecutionResult result = client().execute(command.name(), arguments);
                 runOnUiThread(() -> {
                     resetRunButton(button);
-                    showResult(command, result);
+                    if (command.needNotificationOnComplete()) {
+                        showResult(command, result);
+                    }
                 });
             } catch (Exception e) {
                 runOnUiThread(() -> {
@@ -360,7 +392,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void syncCurrentValues() {
         for (SyncableSlider syncable : List.copyOf(syncableSliders)) {
-            if (syncable.tracking || syncable.reading) {
+            if (syncable.tracking || syncable.reading || syncable.pendingConfirmation) {
                 continue;
             }
             syncable.reading = true;
@@ -395,6 +427,9 @@ public class MainActivity extends AppCompatActivity {
                 }
                 runOnUiThread(() -> {
                     syncable.slider.setEnabled(true);
+                    if (syncable.command.needNotificationOnComplete()) {
+                        showResult(syncable.command, result);
+                    }
                     syncCurrentValues();
                 });
             } catch (Exception e) {
@@ -588,6 +623,7 @@ public class MainActivity extends AppCompatActivity {
         private final Slider slider;
         private boolean tracking;
         private boolean reading;
+        private boolean pendingConfirmation;
 
         private SyncableSlider(
                 RemoteCommand command, RemoteArgument argument, Slider slider) {

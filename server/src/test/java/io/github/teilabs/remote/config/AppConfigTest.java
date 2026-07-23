@@ -1,7 +1,9 @@
 package io.github.teilabs.remote.config;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 
 import java.nio.file.Files;
@@ -27,6 +29,8 @@ public class AppConfigTest {
                   "commands": [{
                     "name": "volume",
                     "type": "SYNCABLE",
+                    "needConfirmation": true,
+                    "needNotificationOnComplete": false,
                     "executable": "set-volume",
                     "args": ["${volume}"],
                     "arguments": [{
@@ -46,6 +50,8 @@ public class AppConfigTest {
 
         assertEquals(CommandType.SYNCABLE, config.commands().get(0).type());
         assertNotNull(config.commands().get(0).read());
+        assertTrue(config.commands().get(0).needConfirmation());
+        assertFalse(config.commands().get(0).needNotificationOnComplete());
     }
 
     @Test
@@ -74,6 +80,29 @@ public class AppConfigTest {
         } catch (IllegalStateException expected) {
             assertEquals(
                     "SYNCABLE command 'volume' requires a read command",
+                    expected.getMessage());
+        }
+    }
+
+    @Test
+    public void rejectsNonBooleanInteractionFlags() throws Exception {
+        try {
+            load("""
+                    {
+                      "ttlMs": 30000,
+                      "publicKeyBase64": "%s",
+                      "commands": [{
+                        "name": "lock",
+                        "type": "SIMPLE",
+                        "needConfirmation": "false",
+                        "executable": "lock"
+                      }]
+                    }
+                    """.formatted(PUBLIC_KEY));
+            fail("Expected config parsing to fail");
+        } catch (IllegalStateException expected) {
+            assertEquals(
+                    "Config field 'needConfirmation' must be a boolean",
                     expected.getMessage());
         }
     }
