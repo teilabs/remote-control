@@ -1,0 +1,46 @@
+# Server build output and local configuration
+/server/target/
+/server/config/app.json
+
+# Local repository tooling data
+/.git-data/
+
+# Android and Gradle build output
+/android/.gradle/
+/android/**/build/
+/android/local.properties
+/android/captures/
+/android/.externalNativeBuild/
+/android/.cxx/
+
+# Android Studio and IntelliJ
+/.idea/
+/android/.idea/
+*.iml
+*.ipr
+*.iws
+
+# Signing keys and local secrets
+*.jks
+*.keystore
+key.properties
+.env
+.env.*
+!.env.example
+
+# Java runtime artifacts
+*.class
+*.hprof
+hs_err_pid*
+replay_pid*
+
+# Logs and temporary files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# Operating system metadata
+.DS_Store
+Thumbs.db

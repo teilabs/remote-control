@@ -1,0 +1,17 @@
+<resources>
+    <style name="Theme.Remote" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/remote_accent</item>
+        <item name="colorPrimaryVariant">@color/remote_accent_dark</item>
+        <item name="colorOnPrimary">@color/black</item>
+        <item name="colorSecondary">@color/remote_accent</item>
+        <item name="colorOnSecondary">@color/black</item>
+        <item name="colorSurface">@color/remote_surface</item>
+        <item name="colorOnSurface">@color/remote_text</item>
+        <item name="colorError">@color/remote_error</item>
+        <item name="android:fontFamily">sans</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:statusBarColor">@color/remote_background</item>
+        <item name="android:navigationBarColor">@color/remote_background</item>
+        <item name="android:windowBackground">@color/remote_background</item>
+    </style>
+</resources>

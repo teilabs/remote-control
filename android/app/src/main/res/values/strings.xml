@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Remote</string>
+    <string name="commands">Commands</string>
+    <string name="refresh">Refresh commands</string>
+    <string name="settings">Connection settings</string>
+    <string name="server_url">Server URL</string>
+    <string name="save">Save</string>
+    <string name="cancel">Cancel</string>
+    <string name="copy_public_key">Copy public key</string>
+    <string name="public_key">Public key</string>
+    <string name="connecting">Connecting</string>
+    <string name="run">Run</string>
+    <string name="running">Running</string>
+</resources>

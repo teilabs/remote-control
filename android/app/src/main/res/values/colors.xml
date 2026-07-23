@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="remote_background">#0F1317</color>
+    <color name="remote_surface">#171C21</color>
+    <color name="remote_accent">#42D3C8</color>
+    <color name="remote_accent_dark">#1C847E</color>
+    <color name="remote_text">#F2F5F4</color>
+    <color name="remote_text_muted">#98A4A9</color>
+    <color name="remote_divider">#30383E</color>
+    <color name="remote_error">#FF837A</color>
+    <color name="black">#FF000000</color>
+</resources>

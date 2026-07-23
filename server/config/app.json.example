@@ -1,0 +1,56 @@
+{
+    "ttlMs": 30000,
+    "publicKeyBase64": "GENERATED_PUBLIC_KEY",
+    "commands": [
+        {
+            "name": "suspend",
+            "type": "SIMPLE",
+            "executable": "noctalia-shell",
+            "args": [
+                "ipc",
+                "call",
+                "sessionMenu",
+                "lockAndSuspend"
+            ]
+        },
+        {
+            "name": "lock",
+            "type": "SIMPLE",
+            "executable": "noctalia-shell",
+            "args": [
+                "ipc",
+                "call",
+                "sessionMenu",
+                "lock"
+            ]
+        },
+        {
+            "name": "set-volume",
+            "type": "SYNCABLE",
+            "executable": "wpctl",
+            "args": [
+                "set-volume",
+                "@DEFAULT_AUDIO_SINK@",
+                "${volume}%"
+            ],
+            "arguments": [
+                {
+                    "name": "volume",
+                    "label": "Volume",
+                    "type": "SLIDER",
+                    "min": 0,
+                    "max": 100,
+                    "step": 1,
+                    "default": 50
+                }
+            ],
+            "read": {
+                "executable": "sh",
+                "args": [
+                    "-c",
+                    "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}'"
+                ]
+            }
+        }
+    ]
+}
