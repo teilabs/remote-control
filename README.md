@@ -478,3 +478,7 @@ from the same terminal used to launch the server.
 | `GET` | `/config` | Yes | Load command and UI metadata |
 | `POST` | `/value` | Yes | Read a synchronized slider value |
 | `POST` | `/execute` | Yes | Execute a configured command |
+
+## License
+
+Licensed under the MIT License. See [LICENSE](LICENSE).
