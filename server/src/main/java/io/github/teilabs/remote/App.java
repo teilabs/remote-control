@@ -13,6 +13,8 @@ import io.github.teilabs.remote.config.Command;
 import io.github.teilabs.remote.config.CommandArgument;
 import io.javalin.Javalin;
 import io.javalin.http.Context;
+
+import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import org.bouncycastle.crypto.signers.Ed25519Signer;
 
 public class App {
@@ -106,13 +108,16 @@ public class App {
         }
 
         Ed25519Signer signer = new Ed25519Signer();
-        signer.init(false, CONFIG.publicKey());
-        byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
-        signer.update(messageBytes, 0, messageBytes.length);
+        for (Ed25519PublicKeyParameters publicKey : CONFIG.publicKeys()) {
+            signer.init(false, publicKey);
+            byte[] messageBytes = message.getBytes(StandardCharsets.UTF_8);
+            signer.update(messageBytes, 0, messageBytes.length);
 
-        if (!signer.verifySignature(signatureBytes)) {
-            reject(ctx, "Invalid signature");
+            if (signer.verifySignature(signatureBytes)) {
+                return;
+            }
         }
+        reject(ctx, "Invalid signature");
     }
 
     private static List<CommandDescriptor> commandDescriptors() {

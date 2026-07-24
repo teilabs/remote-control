@@ -1,6 +1,6 @@
 {
     "ttlMs": 30000,
-    "publicKeyBase64": "GENERATED_PUBLIC_KEY",
+    "publicKeys": ["GENERATED_PUBLIC_KEY"],
     "commands": [
         {
             "name": "suspend",

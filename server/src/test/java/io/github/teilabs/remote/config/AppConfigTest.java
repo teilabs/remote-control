@@ -25,7 +25,7 @@ public class AppConfigTest {
         AppConfig config = load("""
                 {
                   "ttlMs": 30000,
-                  "publicKeyBase64": "%s",
+                  "publicKeys": ["%s"],
                   "commands": [{
                     "name": "volume",
                     "type": "SYNCABLE",
@@ -59,7 +59,7 @@ public class AppConfigTest {
         AppConfig config = load("""
                 {
                   "ttlMs": 30000,
-                  "publicKeyBase64": "%s",
+                  "publicKeys": ["%s"],
                   "commands": [{
                     "name": "mute",
                     "type": "SYNCABLE",
@@ -87,7 +87,7 @@ public class AppConfigTest {
             load("""
                     {
                       "ttlMs": 30000,
-                      "publicKeyBase64": "%s",
+                      "publicKeys": ["%s"],
                       "commands": [{
                         "name": "volume",
                         "type": "SYNCABLE",
@@ -117,7 +117,7 @@ public class AppConfigTest {
             load("""
                     {
                       "ttlMs": 30000,
-                      "publicKeyBase64": "%s",
+                      "publicKeys": ["%s"],
                       "commands": [{
                         "name": "lock",
                         "type": "SIMPLE",

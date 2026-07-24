@@ -12,7 +12,7 @@ import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-public record AppConfig(long ttl, Ed25519PublicKeyParameters publicKey, List<Command> commands) {
+public record AppConfig(long ttl, List<Ed25519PublicKeyParameters> publicKeys, List<Command> commands) {
         private static final ObjectMapper JSON = new ObjectMapper();
         private static final Path DEFAULT_CONFIG_PATH = Path.of("config", "app.json");
 
@@ -22,14 +22,29 @@ public record AppConfig(long ttl, Ed25519PublicKeyParameters publicKey, List<Com
             try {
                 JsonNode config = JSON.readTree(configPath.toFile());
                 long ttl = requiredLong(config, "ttlMs");
-                String publicKey = requiredText(config, "publicKeyBase64");
+                List<Ed25519PublicKeyParameters> publicKeys = parsePublicKeys(config.path("publicKeys"));
                 List<Command> commands = parseCommands(config.path("commands"));
 
-                byte[] publicKeyBytes = Base64.getDecoder().decode(publicKey);
-                return new AppConfig(ttl, new Ed25519PublicKeyParameters(publicKeyBytes, 0), commands);
+                return new AppConfig(ttl, publicKeys, commands);
             } catch (IOException e) {
                 throw new IllegalStateException("Unable to load config file: " + configPath, e);
             }
+        }
+
+        private static List<Ed25519PublicKeyParameters> parsePublicKeys(JsonNode publicKeys) {
+            if (publicKeys.isMissingNode()) {
+                return List.of();
+            }
+            if (!publicKeys.isArray()) {
+                throw new IllegalStateException("Config field 'publicKeys' must be an array");
+            }
+
+            List<Ed25519PublicKeyParameters> parsedPublicKeys = new ArrayList<>();
+            for (JsonNode publicKey : publicKeys) {
+                byte[] publicKeyBytes = Base64.getDecoder().decode(publicKey.asText());
+                parsedPublicKeys.add(new Ed25519PublicKeyParameters(publicKeyBytes, 0));
+            }
+            return List.copyOf(parsedPublicKeys);
         }
 
         private static List<Command> parseCommands(JsonNode commands) {

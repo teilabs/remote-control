@@ -68,12 +68,12 @@ example:
 cp server/config/app.json.example server/config/app.json
 ```
 
-Replace `GENERATED_PUBLIC_KEY` with the public key copied from Android:
+Replace `GENERATED_PUBLIC_KEY` with the public key copied from Android (you can also connect more than one Android device just by adding them to the `publicKeys` array):
 
 ```json
 {
   "ttlMs": 30000,
-  "publicKeyBase64": "PUBLIC_KEY_COPIED_FROM_ANDROID",
+  "publicKeys": ["PUBLIC_KEY_COPIED_FROM_ANDROID", "PUBLIC_KEY_COPIED_FROM_ANOTHER_ANDROID"],
   "commands": []
 }
 ```
@@ -497,7 +497,7 @@ Use an absolute executable path in `app.json` if the service has a different
 
 ### Server returns `401`
 
-- Copy the current Android public key into `publicKeyBase64`.
+- Copy the current Android public key into `publicKeys`.
 - Restart the server after editing `app.json`.
 - Synchronize the phone and computer clocks.
 - Increase `ttlMs` only when necessary.
