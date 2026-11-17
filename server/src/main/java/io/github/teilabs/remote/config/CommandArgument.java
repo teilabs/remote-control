@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 
+/** Describes one user-supplied command argument and its validation rules. */
 public record CommandArgument(
         String name,
         String label,
@@ -14,6 +15,7 @@ public record CommandArgument(
         BigDecimal step,
         List<String> options) {
 
+    /** Returns the supplied/default value in normalized form, or throws if it is invalid. */
     public String validate(Map<String, String> values) {
         String value = values.getOrDefault(name, defaultValue);
         if (value == null) {

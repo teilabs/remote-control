@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+/** Displays configured remote commands and sends user actions to the server. */
 public class MainActivity extends AppCompatActivity {
     private static final String PREFS = "remote_settings";
     private static final String SERVER_URL = "server_url";

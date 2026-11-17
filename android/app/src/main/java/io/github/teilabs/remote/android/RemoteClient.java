@@ -15,16 +15,24 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import javax.crypto.Cipher;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.SecretKeySpec;
+import java.security.SecureRandom;
+import android.util.Base64;
 
+/** Performs authenticated, encrypted HTTP operations against a Remote Control server. */
 final class RemoteClient {
     private final String baseUrl;
     private final SigningKeyStore signingKeyStore;
 
+    /** Creates a client for {@code baseUrl} using the device's persistent credentials. */
     RemoteClient(String baseUrl, SigningKeyStore signingKeyStore) {
         this.baseUrl = normalizeBaseUrl(baseUrl);
         this.signingKeyStore = signingKeyStore;
     }
 
+    /** Fetches and parses the server's command and control metadata. */
     List<RemoteCommand> getCommands() throws Exception {
         JSONObject response = new JSONObject(request("GET", "/config", ""));
         JSONArray commands = response.getJSONArray("commands");
@@ -69,6 +77,7 @@ final class RemoteClient {
         return result;
     }
 
+    /** Executes a configured command with the supplied argument values. */
     ExecutionResult execute(String commandName, Map<String, String> arguments) throws Exception {
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("command", commandName);
@@ -77,6 +86,7 @@ final class RemoteClient {
         return new ExecutionResult(response.getInt("exitCode"), response.optString("output"));
     }
 
+    /** Reads the current value of a configured syncable command. */
     String getValue(String commandName) throws Exception {
         JSONObject response = new JSONObject(request(
                 "POST", "/value", formBody(Map.of("command", commandName))));
@@ -97,6 +107,14 @@ final class RemoteClient {
     }
 
     private String request(String method, String path, String body) throws Exception {
+        if (!path.equals("/key-exchange") && signingKeyStore.serverPublicKeyBase64().isEmpty()) {
+            request("POST", "/key-exchange", "");
+        }
+        String clientKey = signingKeyStore.encryptionPublicKeyBase64();
+        String wireBody = (method.equals("GET") || path.equals("/key-exchange")) ? body
+                : Base64.encodeToString(crypt(Cipher.ENCRYPT_MODE,
+                        signingKeyStore.encryptionKey(signingKeyStore.serverPublicKeyBase64()),
+                        body.getBytes(StandardCharsets.UTF_8)), Base64.NO_WRAP);
         long timestamp = System.currentTimeMillis();
         HttpURLConnection connection = (HttpURLConnection) URI.create(baseUrl + path)
                 .toURL().openConnection();
@@ -105,19 +123,33 @@ final class RemoteClient {
         connection.setRequestMethod(method);
         connection.setRequestProperty("Accept", "application/json");
         connection.setRequestProperty("X-Timestamp", Long.toString(timestamp));
+        connection.setRequestProperty("X-Client-Encryption-Key", clientKey);
         connection.setRequestProperty(
-                "X-Signature", signingKeyStore.sign(timestamp + body));
+                "X-Signature", signingKeyStore.sign(timestamp + clientKey + wireBody));
 
-        if (!body.isEmpty()) {
+        if (!wireBody.isEmpty() || method.equals("POST")) {
             connection.setDoOutput(true);
             connection.setRequestProperty(
                     "Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
-            connection.getOutputStream().write(body.getBytes(StandardCharsets.UTF_8));
+            connection.getOutputStream().write(wireBody.getBytes(StandardCharsets.UTF_8));
         }
 
         int status = connection.getResponseCode();
         String response = read(status >= 400 ? connection.getErrorStream() : connection.getInputStream());
         connection.disconnect();
+        if (!path.equals("/key-exchange")) {
+            response = new String(crypt(Cipher.DECRYPT_MODE,
+                    signingKeyStore.encryptionKey(signingKeyStore.serverPublicKeyBase64()),
+                    Base64.decode(response, Base64.NO_WRAP)), StandardCharsets.UTF_8);
+        } else {
+            JSONObject exchange = new JSONObject(response);
+            byte[] handshakeKey = signingKeyStore.encryptionKeyFromServerPublic(
+                    exchange.getString("ephemeralKey"));
+            String plain = new String(crypt(Cipher.DECRYPT_MODE, handshakeKey,
+                    Base64.decode(exchange.getString("ciphertext"), Base64.NO_WRAP)), StandardCharsets.UTF_8);
+            String encoded = new JSONObject(plain).getString("serverKey");
+            signingKeyStore.saveServerPublicKey(encoded);
+        }
         if (status >= 400) {
             String message = response;
             try {
@@ -128,6 +160,22 @@ final class RemoteClient {
             throw new IOException("Server returned " + status + ": " + message);
         }
         return response;
+    }
+
+    private static byte[] crypt(int mode, byte[] key, byte[] input) throws Exception {
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        if (mode == Cipher.ENCRYPT_MODE) {
+            byte[] iv = new byte[12]; new SecureRandom().nextBytes(iv);
+            cipher.init(mode, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+            byte[] encrypted = cipher.doFinal(input);
+            byte[] result = new byte[iv.length + encrypted.length];
+            System.arraycopy(iv, 0, result, 0, iv.length);
+            System.arraycopy(encrypted, 0, result, iv.length, encrypted.length);
+            return result;
+        }
+        byte[] iv = java.util.Arrays.copyOfRange(input, 0, 12);
+        cipher.init(mode, new SecretKeySpec(key, "AES"), new GCMParameterSpec(128, iv));
+        return cipher.doFinal(input, 12, input.length - 12);
     }
 
     private static String read(InputStream stream) throws IOException {
@@ -152,6 +200,7 @@ final class RemoteClient {
                 : trimmed;
     }
 
+    /** Plaintext result returned by a command execution request. */
     static final class ExecutionResult {
         private final int exitCode;
         private final String output;

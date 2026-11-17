@@ -1,7 +1,8 @@
 # Remote Android
 
-The app loads command metadata from the server and signs every protected HTTP
-request with a device-generated Ed25519 key.
+The app loads command metadata from the server, signs every protected HTTP
+request with a device-generated Ed25519 key, and encrypts request and response
+bodies with AES-GCM using ECDH.
 
 ## Connect a device
 

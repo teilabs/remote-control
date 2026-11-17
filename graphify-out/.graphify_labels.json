@@ -1,1 +1,27 @@
-{"0": "Android Control UI", "1": "Android Activity Lifecycle", "2": "Models and Tests", "3": "Server Configuration Parsing", "4": "Signed HTTP Client", "5": "Architecture and Security Docs", "6": "Server Request Execution", "7": "MDPI Round Launcher", "8": "XXHDPI Launcher Assets", "9": "XXXHDPI Launcher Assets", "10": "XXXHDPI Round Launcher", "11": "Gradle Wrapper Script", "12": "HDPI Launcher Assets", "13": "HDPI Round Launcher", "14": "MDPI Launcher Assets", "15": "XHDPI Launcher Assets", "16": "XHDPI Round Launcher", "17": "XXHDPI Round Launcher", "18": "Android App Build", "19": "Android Root Build", "20": "Gradle Project Settings", "21": "Java Package Namespace"}
+{
+  "0": ".addSyncableControl",
+  "1": "MainActivity",
+  "2": "CommandArgument",
+  "3": "AppConfig",
+  "4": "SigningKeyStore",
+  "5": "Configured Command",
+  "6": "RequestSecurity",
+  "7": "Round Android App Launcher Icon",
+  "8": "Android App Launcher Icon",
+  "9": "Android Launcher Icon",
+  "10": "Round Android App Launcher Icon",
+  "11": "gradlew",
+  "12": "Android App Launcher Icon",
+  "13": "White Android Robot Head Symbol",
+  "14": "Android Launcher Icon",
+  "15": "White Android Robot Head Symbol",
+  "16": "Round Android Launcher Icon",
+  "17": "White Android Robot Head Symbol",
+  "18": "app/build.gradle.kts",
+  "19": "android/build.gradle.kts",
+  "20": "settings.gradle.kts",
+  "21": "io.github.teilabs:remote",
+  "22": "Operations",
+  "23": "AGENTS.md",
+  "24": "Request security protocol"
+}

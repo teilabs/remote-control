@@ -2,6 +2,7 @@ package io.github.teilabs.remote.config;
 
 import java.util.List;
 
+/** Immutable configuration for one command exposed through the API. */
 public record Command(
         String name,
         CommandType type,

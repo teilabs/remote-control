@@ -2,6 +2,7 @@ package io.github.teilabs.remote.android;
 
 import java.util.List;
 
+/** Client-side representation of a command descriptor returned by the server. */
 final class RemoteCommand {
     private final String name;
     private final String type;

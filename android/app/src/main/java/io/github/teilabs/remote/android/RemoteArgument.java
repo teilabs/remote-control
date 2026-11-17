@@ -2,6 +2,7 @@ package io.github.teilabs.remote.android;
 
 import java.util.List;
 
+/** Client-side representation of one argument control in a command descriptor. */
 final class RemoteArgument {
     private final String name;
     private final String label;

@@ -14,15 +14,18 @@ import io.github.teilabs.remote.config.Command;
 import io.github.teilabs.remote.config.CommandArgument;
 import io.github.teilabs.remote.config.CommandType;
 
+/** Validates configured command arguments and runs the associated operating-system processes. */
 public class CommandExecutor {
     private final Map<String, Command> commands = new HashMap<>();
 
+    /** Builds an executor from the commands in {@code config}. */
     public CommandExecutor(AppConfig config) {
         config.commands().forEach((command) -> {
             commands.put(command.name(), command);
         });
     }
 
+    /** Validates arguments and executes the named command. */
     public ExecutionResult execute(String commandName, Map<String, String> suppliedArguments) {
         Command command = commands.get(commandName);
         if (command == null) {
@@ -47,6 +50,7 @@ public class CommandExecutor {
         }
     }
 
+    /** Runs the configured read process for a syncable command and validates its output. */
     public String readValue(String commandName) {
         Command command = commands.get(commandName);
         if (command == null) {
@@ -101,13 +105,17 @@ public class CommandExecutor {
         return result;
     }
 
+    /** Indicates that a request referred to a command absent from the configuration. */
     public static final class UnknownCommandException extends IllegalArgumentException {
+        /** Creates an exception with a human-readable command lookup error. */
         public UnknownCommandException(String message) {
             super(message);
         }
     }
 
+    /** Result of a completed configured process. */
     public record ExecutionResult(int exitCode, String output) {
+        /** Returns whether the process exited successfully. */
         public boolean isSuccess() {
             return exitCode == 0;
         }

@@ -12,10 +12,12 @@ import org.bouncycastle.crypto.params.Ed25519PublicKeyParameters;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+/** Parsed server settings: request timestamp tolerance, trusted device keys, and commands. */
 public record AppConfig(long ttl, List<Ed25519PublicKeyParameters> publicKeys, List<Command> commands) {
         private static final ObjectMapper JSON = new ObjectMapper();
         private static final Path DEFAULT_CONFIG_PATH = Path.of("config", "app.json");
 
+        /** Loads configuration from {@code remote.config}, or the default {@code config/app.json}. */
         public static AppConfig load() {
             Path configPath = Path.of(System.getProperty("remote.config", DEFAULT_CONFIG_PATH.toString()));
 

@@ -1,6 +1,7 @@
 # Server build output and local configuration
 /server/target/
 /server/config/app.json
+/server/config/server-encryption-key.pk8*
 
 # Local repository tooling data
 /.git-data/

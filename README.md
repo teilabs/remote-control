@@ -2,11 +2,18 @@
 
 Remote Control lets an Android device run a configured set of commands on a
 computer. The server publishes command metadata, the Android app builds its UI
-from that metadata, and every protected request is signed with an Ed25519 key
-stored on the Android device.
+from that metadata. Protected requests are signed with an Ed25519 key and
+encrypted with AES-GCM using an ECDH-derived key.
 
 Commands can be simple buttons, commands with arguments, or live synchronized
 controls such as volume sliders, mute toggles, selections, and text values.
+
+Project documentation is split by topic:
+
+- [Architecture](docs/architecture.md)
+- [HTTP API](docs/api.md)
+- [Request security protocol](docs/protocol.md)
+- [Operations and deployment](docs/operations.md)
 
 ## Project structure
 
@@ -53,8 +60,8 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
 Open the app, select the settings icon, and use **Copy public key**. The app
-generates its Ed25519 key pair automatically on first launch. Its private key
-stays encrypted on the device using Android Keystore.
+generates its signing and encryption key pairs automatically on first launch.
+Their private keys stay encrypted on the device using Android Keystore.
 
 Clearing the application's data or reinstalling it may generate a new key. If
 that happens, copy the new public key into the server configuration.
@@ -439,15 +446,25 @@ On first launch, Android generates an Ed25519 key pair:
 
 - The private key is encrypted using Android Keystore and never sent to the
   server.
-- The public key is copied into `server/config/app.json`.
+- The Ed25519 public key is copied into `server/config/app.json`.
 - Protected requests include `X-Timestamp` and `X-Signature` headers.
-- The signature covers the timestamp followed by the exact request body.
+- The signature covers the timestamp, client encryption public key, and exact
+  transmitted body.
 - `/health` is public; `/config`, `/value`, and `/execute` require a valid
   signature.
 
-Request signing authenticates the device but does not encrypt network traffic.
-Use this project only on a trusted LAN or VPN, or place the server behind an
-HTTPS reverse proxy. Do not expose port `7000` directly to the public internet.
+The first signed connection performs an ECDH key exchange. The server returns
+its encryption public key inside a response encrypted for the device; later
+request and response bodies use AES-GCM. The server's EC private key is stored
+at `server/config/server-encryption-key.pk8` (override with
+`-Dremote.serverKey=/path/to/key.pk8`) and must be kept private and backed up
+alongside the server configuration. Changing or losing it requires reconnecting
+devices. Use HTTPS or a trusted LAN/VPN as additional transport protection;
+body encryption does not hide request paths, headers, or traffic timing.
+The first server key is accepted on first use and then pinned on the device;
+the encrypted exchange protects it from passive observers but cannot detect an
+active attacker substituting a key during that first connection. Verify the
+server fingerprint through a trusted channel before relying on the pin.
 
 The server configuration can execute arbitrary programs. Restrict access to
 the configuration file and run the server as an unprivileged user.
