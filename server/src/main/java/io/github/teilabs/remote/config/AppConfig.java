@@ -65,6 +65,7 @@ public record AppConfig(long ttl, List<Ed25519PublicKeyParameters> publicKeys, L
                 List<String> args = optionalStringArray(command.path("args"), "args");
                 List<CommandArgument> arguments = parseArguments(command.path("arguments"));
                 ReadCommand read = parseReadCommand(command.path("read"), type);
+                boolean runInBackground = optionalBoolean(command, "runInBackground", false);
                 boolean interactiveByDefault = type == CommandType.SIMPLE;
                 boolean needConfirmation = optionalBoolean(
                         command, "needConfirmation", interactiveByDefault);
@@ -79,6 +80,7 @@ public record AppConfig(long ttl, List<Ed25519PublicKeyParameters> publicKeys, L
                         args,
                         arguments,
                         read,
+                        runInBackground,
                         needConfirmation,
                         needNotificationOnComplete));
             }

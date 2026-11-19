@@ -10,6 +10,7 @@ public record Command(
         List<String> args,
         List<CommandArgument> arguments,
         ReadCommand read,
+        boolean runInBackground,
         boolean needConfirmation,
         boolean needNotificationOnComplete) {
 

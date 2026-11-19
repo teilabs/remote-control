@@ -31,6 +31,12 @@ Its successful response contains the process exit code and combined output:
 {"exitCode":0,"output":""}
 ```
 
+Set `runInBackground` to `true` on a command that should return as soon as its
+process starts. The response then uses exit code `0` and output
+`"Started in background"`; the server does not wait for that process to exit,
+and its later exit status is not reported. This is useful for commands such as
+screen lockers that stay running until the user unlocks the device.
+
 Errors use an `error` string. Typical statuses are `400` for invalid/missing
 input, `401` for authentication/decryption failure, `404` for an unknown
 command, and `502` when a configured process cannot run or its read command

@@ -119,6 +119,7 @@ public final class RemoteServer {
             String name,
             String type,
             List<CommandArgument> arguments,
+            boolean runInBackground,
             boolean needConfirmation,
             boolean needNotificationOnComplete) {
         private static CommandDescriptor from(Command command) {
@@ -126,6 +127,7 @@ public final class RemoteServer {
                     command.name(),
                     command.type().name(),
                     command.arguments(),
+                    command.runInBackground(),
                     command.needConfirmation(),
                     command.needNotificationOnComplete());
         }

@@ -44,7 +44,9 @@ public class CommandExecutor {
                         .map(value -> replacePlaceholders(value, argumentValues))
                         .forEach(commandList::add);
 
-                return run(commandName, commandList);
+                return command.runInBackground()
+                        ? runInBackground(commandName, commandList)
+                        : run(commandName, commandList);
             default:
                     throw new RuntimeException("Unsupported command type: " + command.type());
         }
@@ -91,6 +93,21 @@ public class CommandExecutor {
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new RuntimeException("Command was interrupted: " + commandName, e);
+        } catch (IOException e) {
+            throw new RuntimeException("Could not start command '" + commandName
+                    + "' with executable '" + commandList.get(0) + "': " + e.getMessage(), e);
+        }
+    }
+
+    private static ExecutionResult runInBackground(String commandName, List<String> commandList) {
+        ProcessBuilder pb = new ProcessBuilder(commandList);
+        pb.redirectOutput(ProcessBuilder.Redirect.DISCARD);
+        pb.redirectError(ProcessBuilder.Redirect.DISCARD);
+
+        try {
+            Process process = pb.start();
+            process.getOutputStream().close();
+            return new ExecutionResult(0, "Started in background");
         } catch (IOException e) {
             throw new RuntimeException("Could not start command '" + commandName
                     + "' with executable '" + commandList.get(0) + "': " + e.getMessage(), e);
